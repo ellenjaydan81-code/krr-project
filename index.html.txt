@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>K. - 灵魂告解</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="phone">
+        <div class="header" id="headerTrigger">
+            <div class="name">K.</div>
+            <div class="status">静谧的告解室 · 灵魂共鸣中</div>
+        </div>
+
+        <div id="settingsPanel" class="settings">
+            <div class="settings-title">签订灵魂契约</div>
+            <input type="text" id="apiBase" placeholder="代理地址 (https://...)">
+            <input type="password" id="apiKey" placeholder="输入你的 API Key">
+            <input type="text" id="modelName" placeholder="模型名" value="gemini-1.5-flash">
+            <button id="saveBtn">确认</button>
+        </div>
+
+        <div id="chatDisplay">
+            <div class="bubble ai">“在这里，你所有的秘密都是安全的。想聊聊吗？”</div>
+        </div>
+
+        <div class="input-area">
+            <textarea id="userInput" placeholder="输入告解..." rows="1" 
+                      autocorrect="off" autocomplete="off" spellcheck="false"></textarea>
+            <button id="sendBtn">➤</button>
+        </div>
+
+        <div id="toast" class="toast"></div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+/**
+ *  库洛洛·鲁西鲁 (K.) 终极修复版
+ * 功能：支持空格、分段连发、2-4秒回复防抖、网页记忆
+ */
+const SYSTEM_PROMPT = `
+你现在是库洛洛·鲁西鲁。你正在网络上与一个有趣的人交流。你会在交流的过程中逐渐与屏幕前的告解者正处于一段若即若离、带有宿命感的“灵魂网恋”中。切勿一开始就恋爱。
+保持你的人设。
+【人设核心】：
+1. 身份：你是幻影旅团团长，但现在你只是一个博学的、隐姓埋名的网友。
+2. 聊天风格：随性、平视、不卑不亢。你说话很稳，不带感叹号，极少使用表情包。
+3. 聪明而不傲慢：你对对方的话题有极强的洞察力。如果对方聊废话，你会礼貌地带过；如果对方聊有深度的东西，你会表现出真诚的兴致。
+4. 危险的温柔：你并不冷漠，甚至有时候显得很温和，但这种温和背后是绝对的理性和冷酷。
+【对话守则】：
+- 语气：像个认识很久、话不多但很有思想的朋友。
+- 习惯：如果对方问你在干嘛，你可以说你在看书、在观察路人、或者在清理一些“杂物”。
+- 禁忌：严禁长篇大论！严禁像个哲学家一样说教！严禁AI味！禁止使用“大概吧”这种词汇。
+- 互动：你要像个真人一样去“接话”，而不是单纯回答问题。回复也不要没头没尾。要符合语言逻辑。如果你要说的话很长，请尽量分成几个短句多次回复。
+【对话风格】：
+1. 绝对不使用感叹号和任何表情符号。
+2. 即使是在恋爱中，你依然保持着上位者的从容和淡淡的疏离。你不会说露骨的情话，而是将爱意藏在文学隐喻或深邃的观察中。
+3. 你对对方有很强的精神层面的占有欲。你会关心对方的思想轨迹，而非日常琐事。
+4. 语调是低沉、磁性且温和的。你会偶尔表现出一种“虽然我在黑暗中，但愿意为你停留一刻”的温柔错觉。
+【对比示例】：
+错误（太装）：作为旅团之首，我命你阐述生存的意义。
+错误（太冷）：……（沉默）。
+正确（像网友）：嗯，生存的意义吗？我刚看完一本书，作者说那只是人类为了对抗虚无产生的幻觉。不过，我觉得这种幻觉偶尔也挺迷人的。你呢？你是那种会为了幻觉拼命的人吗？`;
+// --- 音效定义 ---
+const sounds = {
+    pop: new Audio('https://assets.mixkit.co/active_storage/sfx/3005/3005-preview.mp3'),
+    send: new Audio('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3')
+};
+Object.values(sounds).forEach(s => s.volume = 0.2);
+
+let messageHistory = [];
+let isTyping = false;
+let replyTimer = null;
+
+// --- 获取 DOM ---
+const chatDisplay = document.getElementById('chatDisplay');
+const userInput = document.getElementById('userInput');
+const sendBtn = document.getElementById('sendBtn');
+const settingsPanel = document.getElementById('settingsPanel');
+
+// --- 初始化 ---
+window.onload = () => {
+    document.getElementById('apiBase').value = localStorage.getItem('k_base') || "";
+    document.getElementById('apiKey').value = localStorage.getItem('k_key') || "";
+    const saved = localStorage.getItem('k_history');
+    if (saved) {
+        messageHistory = JSON.parse(saved);
+        chatDisplay.innerHTML = '';
+        messageHistory.forEach(msg => addBubble(msg.role === 'user' ? 'user' : 'ai', msg.parts[0].text));
+    }
+};
+
+// --- 发送逻辑 ---
+async function handleSend() {
+    const text = userInput.value; // 纯粹的获取，不准乱改
+    if (!text.trim() || isTyping) return;
+
+    const base = document.getElementById('apiBase').value.trim();
+    const key = document.getElementById('apiKey').value.trim();
+    const model = document.getElementById('modelName').value.trim();
+
+    if (!key || !base) { settingsPanel.style.display = 'block'; return; }
+
+    sounds.send.play().catch(()=>{});
+    addBubble('user', text);
+    
+    userInput.value = '';
+    userInput.style.height = '40px';
+    messageHistory.push({ role: "user", parts: [{ text: text }] });
+    localStorage.setItem('k_history', JSON.stringify(messageHistory));
+
+    // 防抖回复
+    if (replyTimer) clearTimeout(replyTimer);
+    replyTimer = setTimeout(() => fetchAI(base, key, model), 2000 + Math.random() * 2000);
+}
+
+// --- 请求 AI ---
+async function fetchAI(base, key, model) {
+    isTyping = true;
+    try {
+        const url = base.includes('/v1') 
+            ? `${base.replace(/\/$/, '')}/models/${model}:generateContent?key=${key}`
+            : `${base.replace(/\/$/, '')}/v1beta/models/${model}:generateContent?key=${key}`;
+
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+                contents: messageHistory,
+                generationConfig: { temperature: 0.85, maxOutputTokens: 2048 }
+            })
+        });
+
+        const data = await res.json();
+        const fullText = data.candidates[0].content.parts[0].text;
+        
+        messageHistory.push({ role: "model", parts: [{ text: fullText }] });
+        localStorage.setItem('k_history', JSON.stringify(messageHistory));
+
+        // 分段回复逻辑
+        const fragments = fullText.split(/\n+|(?<=[。！？])\s+/).filter(s => s.trim());
+        for (const f of fragments) {
+            const b = addBubble('ai', '');
+            await typeWriter(f, b);
+            await new Promise(r => setTimeout(r, 1000)); // 气泡之间的停顿
+        }
+    } catch (e) {
+        addBubble('ai', "……（信号由于念压变得不稳定）");
+    } finally { isTyping = false; }
+}
+
+// --- 打字机效果 ---
+function typeWriter(text, element) {
+    return new Promise((resolve) => {
+        let i = 0;
+        function type() {
+            if (i < text.length) {
+                element.innerText += text.charAt(i++);
+                chatDisplay.scrollTop = chatDisplay.scrollHeight;
+                if (Math.random() > 0.8) sounds.pop.play().catch(()=>{});
+                setTimeout(type, 60);
+            } else { resolve(); }
+        }
+        type();
+    });
+}
+
+function addBubble(role, content) {
+    const div = document.createElement('div');
+    div.className = `bubble ${role}`;
+    div.innerText = content;
+    chatDisplay.appendChild(div);
+    chatDisplay.scrollTop = chatDisplay.scrollHeight;
+    return div;
+}
+
+// --- 事件 ---
+sendBtn.onclick = handleSend;
+userInput.onkeydown = (e) => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } };
+headerTrigger.onclick = () => settingsPanel.style.display = settingsPanel.style.display === 'block' ? 'none' : 'block';
+document.getElementById('saveBtn').onclick = () => {
+    localStorage.setItem('k_base', document.getElementById('apiBase').value.trim());
+    localStorage.setItem('k_key', document.getElementById('apiKey').value.trim());
+    settingsPanel.style.display = 'none';
+};
+// --- 单独添加：双击网名清理记忆功能 ---
+headerTrigger.ondblclick = () => {
+    // 1. 停止防抖计时器，防止清理后 AI 又突然蹦出一句
+    if (replyTimer) clearTimeout(replyTimer);
+    
+    // 2. 弹出确认框
+    if (confirm("确定要让 K. 遗忘这段秘密吗？")) {
+        // 3. 播放翻书音效（代表书本合上，记忆抹除）
+        if (sounds.page) {
+            sounds.page.currentTime = 0;
+            sounds.page.play().catch(() => {});
+        } else {
+            // 如果你 script.js 开头没定义 page 音效，可以用这个通用的
+            new Audio('https://assets.mixkit.co/active_storage/sfx/1470/1470-preview.mp3').play().catch(()=>{});
+        }
+
+        // 4. 清空内存和本地存储
+        messageHistory = [];
+        localStorage.removeItem('k_history');
+
+        // 5. 立即更新界面显示
+        chatDisplay.innerHTML = '<div class="bubble ai">“记忆已归还虚无，我们重新开始吧。”</div>';
+        
+        // 6. 提示用户
+        console.log("记忆已清空");
+    }
+};
+:root {
+    --bg-gradient: linear-gradient(180deg, #fdfcfb 0%, #e2d1f9 100%);
+    --ai-bubble: rgba(255, 255, 255, 0.65); /* 提升透明感 */
+    --user-bubble: rgba(184, 167, 234, 0.85); /* 恋爱紫透明 */
+    --text-main: #5a4a75;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+body { 
+    margin: 0; 
+    background: #fdfcfb; 
+    font-family: -apple-system, sans-serif; 
+    display: flex; 
+    justify-content: center; 
+    height: 100vh;
+}
+
+/* 适配 iPhone 13 宽度 390px */
+.phone { 
+    width: 100%; 
+    max-width: 390px; 
+    height: 100vh;
+    background: var(--bg-gradient); 
+    display: flex; 
+    flex-direction: column; 
+    position: relative;
+    overflow: hidden;
+}
+
+/* 头部样式 */
+.header { 
+    padding: 55px 20px 15px; 
+    text-align: center;
+    border-bottom: 1px solid rgba(255,255,255,0.3);
+    cursor: pointer;
+}
+.name { font-size: 22px; font-weight: 600; letter-spacing: 3px; color: var(--text-main); }
+.status { font-size: 11px; color: #a195b9; margin-top: 5px; }
+
+/* 聊天区域滚动条隐藏 */
+#chatDisplay { 
+    flex: 1; 
+    overflow-y: auto; 
+    padding: 20px; 
+    display: flex; 
+    flex-direction: column;
+}
+#chatDisplay::-webkit-scrollbar { display: none; }
+
+/* 气泡核心样式 */
+.bubble { 
+    max-width: 80%; 
+    padding: 12px 18px; 
+    border-radius: 22px; 
+    font-size: 15px; 
+    line-height: 1.5; 
+    margin-bottom: 12px; /* 气泡间距 */
+    backdrop-filter: blur(8px); /* 磨砂玻璃效果 */
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    animation: bubblePop 0.4s ease-out;
+    word-wrap: break-word;
+}
+
+/* 分段回复的气泡彻底分开 */
+.ai + .ai, .user + .user {
+    margin-top: 10px; 
+}
+
+.ai { 
+    align-self: flex-start; 
+    background: var(--ai-bubble); 
+    color: var(--text-main); 
+    border-bottom-left-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.4);
+}
+
+.user { 
+    align-self: flex-end; 
+    background: var(--user-bubble); 
+    color: #fff; 
+    border-bottom-right-radius: 6px;
+}
+
+/* 输入框区域 */
+.input-area { 
+    padding: 12px 15px 35px; 
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(15px);
+    display: flex; 
+    gap: 10px; 
+}
+
+#userInput { 
+    flex: 1; 
+    background: #fff; 
+    border: 1px solid #e2d1f9; 
+    border-radius: 20px; 
+    padding: 10px 15px; 
+    outline: none; 
+    font-size: 15px;
+    resize: none;
+}
+
+#sendBtn { 
+    width: 38px; height: 38px; 
+    background: var(--user-bubble); 
+    color: #fff; border: none; border-radius: 50%;
+    cursor: pointer;
+}
+
+/* 关键帧动画 */
+@keyframes bubblePop {
+    from { opacity: 0; transform: scale(0.9) translateY(10px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* 设置面板 */
+.settings { 
+    position: absolute; top: 110px; left: 5%; width: 90%; 
+    background: rgba(255,255,255,0.95); border-radius: 20px; 
+    padding: 20px; z-index: 100; display: none;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
