@@ -33,10 +33,135 @@
 
         <div id="toast" class="toast"></div>
     </div>
+<style>
+:root {
+    --bg-gradient: linear-gradient(180deg, #fdfcfb 0%, #e2d1f9 100%);
+    --ai-bubble: rgba(255, 255, 255, 0.65); /* 提升透明感 */
+    --user-bubble: rgba(184, 167, 234, 0.85); /* 恋爱紫透明 */
+    --text-main: #5a4a75;
+}
 
-    <script src="script.js"></script>
-</body>
-</html>
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+body { 
+    margin: 0; 
+    background: #fdfcfb; 
+    font-family: -apple-system, sans-serif; 
+    display: flex; 
+    justify-content: center; 
+    height: 100vh;
+}
+
+/* 适配 iPhone 13 宽度 390px */
+.phone { 
+    width: 100%; 
+    max-width: 390px; 
+    height: 100vh;
+    background: var(--bg-gradient); 
+    display: flex; 
+    flex-direction: column; 
+    position: relative;
+    overflow: hidden;
+}
+
+/* 头部样式 */
+.header { 
+    padding: 55px 20px 15px; 
+    text-align: center;
+    border-bottom: 1px solid rgba(255,255,255,0.3);
+    cursor: pointer;
+}
+.name { font-size: 22px; font-weight: 600; letter-spacing: 3px; color: var(--text-main); }
+.status { font-size: 11px; color: #a195b9; margin-top: 5px; }
+
+/* 聊天区域滚动条隐藏 */
+#chatDisplay { 
+    flex: 1; 
+    overflow-y: auto; 
+    padding: 20px; 
+    display: flex; 
+    flex-direction: column;
+}
+#chatDisplay::-webkit-scrollbar { display: none; }
+
+/* 气泡核心样式 */
+.bubble { 
+    max-width: 80%; 
+    padding: 12px 18px; 
+    border-radius: 22px; 
+    font-size: 15px; 
+    line-height: 1.5; 
+    margin-bottom: 12px; /* 气泡间距 */
+    backdrop-filter: blur(8px); /* 磨砂玻璃效果 */
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    animation: bubblePop 0.4s ease-out;
+    word-wrap: break-word;
+}
+
+/* 分段回复的气泡彻底分开 */
+.ai + .ai, .user + .user {
+    margin-top: 10px; 
+}
+
+.ai { 
+    align-self: flex-start; 
+    background: var(--ai-bubble); 
+    color: var(--text-main); 
+    border-bottom-left-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.4);
+}
+
+.user { 
+    align-self: flex-end; 
+    background: var(--user-bubble); 
+    color: #fff; 
+    border-bottom-right-radius: 6px;
+}
+
+/* 输入框区域 */
+.input-area { 
+    padding: 12px 15px 35px; 
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(15px);
+    display: flex; 
+    gap: 10px; 
+}
+
+#userInput { 
+    flex: 1; 
+    background: #fff; 
+    border: 1px solid #e2d1f9; 
+    border-radius: 20px; 
+    padding: 10px 15px; 
+    outline: none; 
+    font-size: 15px;
+    resize: none;
+}
+
+#sendBtn { 
+    width: 38px; height: 38px; 
+    background: var(--user-bubble); 
+    color: #fff; border: none; border-radius: 50%;
+    cursor: pointer;
+}
+
+/* 关键帧动画 */
+@keyframes bubblePop {
+    from { opacity: 0; transform: scale(0.9) translateY(10px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* 设置面板 */
+.settings { 
+    position: absolute; top: 110px; left: 5%; width: 90%; 
+    background: rgba(255,255,255,0.95); border-radius: 20px; 
+    padding: 20px; z-index: 100; display: none;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+  </style>
+</head>
+<body>
+    <script>
 /**
  *  库洛洛·鲁西鲁 (K.) 终极修复版
  * 功能：支持空格、分段连发、2-4秒回复防抖、网页记忆
@@ -213,127 +338,6 @@ headerTrigger.ondblclick = () => {
         console.log("记忆已清空");
     }
 };
-:root {
-    --bg-gradient: linear-gradient(180deg, #fdfcfb 0%, #e2d1f9 100%);
-    --ai-bubble: rgba(255, 255, 255, 0.65); /* 提升透明感 */
-    --user-bubble: rgba(184, 167, 234, 0.85); /* 恋爱紫透明 */
-    --text-main: #5a4a75;
-}
-
-* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-
-body { 
-    margin: 0; 
-    background: #fdfcfb; 
-    font-family: -apple-system, sans-serif; 
-    display: flex; 
-    justify-content: center; 
-    height: 100vh;
-}
-
-/* 适配 iPhone 13 宽度 390px */
-.phone { 
-    width: 100%; 
-    max-width: 390px; 
-    height: 100vh;
-    background: var(--bg-gradient); 
-    display: flex; 
-    flex-direction: column; 
-    position: relative;
-    overflow: hidden;
-}
-
-/* 头部样式 */
-.header { 
-    padding: 55px 20px 15px; 
-    text-align: center;
-    border-bottom: 1px solid rgba(255,255,255,0.3);
-    cursor: pointer;
-}
-.name { font-size: 22px; font-weight: 600; letter-spacing: 3px; color: var(--text-main); }
-.status { font-size: 11px; color: #a195b9; margin-top: 5px; }
-
-/* 聊天区域滚动条隐藏 */
-#chatDisplay { 
-    flex: 1; 
-    overflow-y: auto; 
-    padding: 20px; 
-    display: flex; 
-    flex-direction: column;
-}
-#chatDisplay::-webkit-scrollbar { display: none; }
-
-/* 气泡核心样式 */
-.bubble { 
-    max-width: 80%; 
-    padding: 12px 18px; 
-    border-radius: 22px; 
-    font-size: 15px; 
-    line-height: 1.5; 
-    margin-bottom: 12px; /* 气泡间距 */
-    backdrop-filter: blur(8px); /* 磨砂玻璃效果 */
-    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-    animation: bubblePop 0.4s ease-out;
-    word-wrap: break-word;
-}
-
-/* 分段回复的气泡彻底分开 */
-.ai + .ai, .user + .user {
-    margin-top: 10px; 
-}
-
-.ai { 
-    align-self: flex-start; 
-    background: var(--ai-bubble); 
-    color: var(--text-main); 
-    border-bottom-left-radius: 6px;
-    border: 1px solid rgba(255,255,255,0.4);
-}
-
-.user { 
-    align-self: flex-end; 
-    background: var(--user-bubble); 
-    color: #fff; 
-    border-bottom-right-radius: 6px;
-}
-
-/* 输入框区域 */
-.input-area { 
-    padding: 12px 15px 35px; 
-    background: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(15px);
-    display: flex; 
-    gap: 10px; 
-}
-
-#userInput { 
-    flex: 1; 
-    background: #fff; 
-    border: 1px solid #e2d1f9; 
-    border-radius: 20px; 
-    padding: 10px 15px; 
-    outline: none; 
-    font-size: 15px;
-    resize: none;
-}
-
-#sendBtn { 
-    width: 38px; height: 38px; 
-    background: var(--user-bubble); 
-    color: #fff; border: none; border-radius: 50%;
-    cursor: pointer;
-}
-
-/* 关键帧动画 */
-@keyframes bubblePop {
-    from { opacity: 0; transform: scale(0.9) translateY(10px); }
-    to { opacity: 1; transform: scale(1) translateY(0); }
-}
-
-/* 设置面板 */
-.settings { 
-    position: absolute; top: 110px; left: 5%; width: 90%; 
-    background: rgba(255,255,255,0.95); border-radius: 20px; 
-    padding: 20px; z-index: 100; display: none;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-}
+</script>
+</body>
+</html>
