@@ -50,46 +50,45 @@
     -webkit-tap-highlight-color: transparent; 
 }
 
-body {
-    position: fixed; /* 使用 fixed 定位锁定视口 */
-    top: 0;
-    left: 0;
+/* 1. 根布局锁定：防止页面被键盘顶起 */
+html, body {
+    position: fixed;
     width: 100%;
     height: 100%;
+    margin: 0;
+    padding: 0;
     overflow: hidden;
-    touch-action: none; /* 禁用部分手势触发的缩放 */
+    background: #fff5f7;
 }
 
-/* 聊天窗容器：居中锁定 */
 .phone { 
-    position: absolute;
-    top: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 100%;
-    max-width: 390px; /* iPhone 13 宽度 */
-    height: 100%; /* 配合 JS 动态调整 */
+    /* 使用 100dvh 获取移动端浏览器的真实高度 */
+    height: 100dvh; 
+    width: 100vw; 
+    max-width: 500px; /* 在电脑上看也不会太窄 */
+    margin: 0 auto;
     background: var(--bg-gradient); 
     display: flex; 
-    flex-direction: column; 
-    overflow: hidden;
+    flex-direction: column;
+    position: relative;
 }
 
-/* 头部：精致少女感 */
+/* 2. Header 重新排版：解决“太窄”和挤压感 */
 .header { 
-    padding: 50px 20px 15px; 
+    padding: 60px 25px 20px; /* 增加顶部高度适配刘海，增加左右间距 */
     text-align: center;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.4);
-    flex-shrink: 0;
+    background: rgba(255, 255, 255, 0.15); /* 加一点点底色增加层次感 */
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+    flex-shrink: 0; /* 确保头部不会被压缩 */
 }
+
 .name { 
-    font-size: 22px; 
+    font-size: 24px; /* 稍微调大一点 */
     font-weight: 600; 
-    letter-spacing: 5px; 
+    letter-spacing: 6px; 
     color: #ff85a2; 
-    text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
 }
-.status { font-size: 11px; color: #b8a0aa; margin-top: 5px; }
 
 /* 聊天区域 */
 #chatDisplay { 
@@ -102,6 +101,25 @@ body {
 }
 #chatDisplay::-webkit-scrollbar { display: none; }
 
+/* 3. 输入框：防缩放金牌 */
+#userInput { 
+    flex: 1; 
+    background: #fff; 
+    border: 1px solid #ffd1dc; 
+    border-radius: 22px; 
+    padding: 12px 18px; 
+    outline: none; 
+    font-size: 16px !important; /* 强制 16px，iOS 就不敢乱放大了 */
+    color: #8a6d7a;
+    resize: none;
+    height: 44px;
+    -webkit-appearance: none;
+}
+
+.input-area {
+    /* 适配 iPhone 底部手势横条 */
+    padding: 15px 15px calc(15px + env(safe-area-inset-bottom));
+}
 /* 气泡：圆润Q弹感 */
 .bubble { 
     max-width: 82%; 
@@ -171,14 +189,14 @@ body {
     flex: 1; 
     background: #fff; 
     border: 1px solid #ffd1dc; 
-    border-radius: 22px; 
+    border-radius: 20px; 
     padding: 10px 15px; 
     outline: none; 
-    font-size: 16px; /* 必须是 16px */
+    font-size: 17px; /* 设为 17px 完美规避 iOS 自动缩放 */
     color: #8a6d7a;
     resize: none;
-    height: 44px;
-    -webkit-appearance: none; /* 移除 iOS 默认内阴影 */
+    line-height: 1.4;
+    -webkit-tap-highlight-color: transparent;
 }
 
 #sendBtn { 
@@ -266,28 +284,85 @@ window.onload = () => {
     }
 };
 
-// --- 发送逻辑 ---
+// --- 1. 布局修复辅助函数 (新增) ---
+// 专门对付 iOS Safari 键盘弹出导致的“页面飞走”
+function adjustLayout() {
+    // 强制视口回到顶部，防止 Header 被系统顶出屏幕
+    window.scrollTo(0, 0);
+    document.body.scrollTop = 0;
+    
+    const container = document.querySelector('.phone');
+    if (window.visualViewport) {
+        // 动态计算键盘弹出后的真实高度，并赋值给容器
+        const vh = window.visualViewport.height;
+        container.style.height = `${vh}px`;
+    }
+    
+    // 确保内容滚动到底部查看最新消息
+    const chatDisplay = document.getElementById('chatDisplay');
+    chatDisplay.scrollTop = chatDisplay.scrollHeight;
+}
+
+// --- 2. 核心发送逻辑 (替换) ---
 async function handleSend() {
-    const text = userInput.value; // 纯粹的获取，不准乱改
+    const text = userInput.value; 
+    // 依然保持你的纯粹获取原则，不做 trim 以外的乱改
     if (!text.trim() || isTyping) return;
 
     const base = document.getElementById('apiBase').value.trim();
     const key = document.getElementById('apiKey').value.trim();
     const model = document.getElementById('modelName').value.trim();
 
-    if (!key || !base) { settingsPanel.style.display = 'block'; return; }
+    // 如果没配置 API，弹出设置面板
+    if (!key || !base) { 
+        settingsPanel.style.display = 'block'; 
+        return; 
+    }
 
+    // 播放音效并添加用户气泡
     sounds.send.play().catch(()=>{});
     addBubble('user', text);
     
+    // 发送后清空输入框并重置高度
     userInput.value = '';
-    userInput.style.height = '40px';
+    userInput.style.height = '44px';
+
+    // 【关键修复】发送后立刻强制布局复位
+    adjustLayout();
+
+    // 存入记忆
     messageHistory.push({ role: "user", parts: [{ text: text }] });
     localStorage.setItem('k_history', JSON.stringify(messageHistory));
 
-    // 防抖回复
+    // 防抖回复逻辑
     if (replyTimer) clearTimeout(replyTimer);
     replyTimer = setTimeout(() => fetchAI(base, key, model), 2000 + Math.random() * 2000);
+}
+
+// --- 3. 自动化监听逻辑 (新增) ---
+
+// A. 监听键盘弹出/收起（iPhone 适配核心）
+if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', adjustLayout);
+}
+
+// B. 修复输入框聚焦时的位移
+userInput.addEventListener('focus', () => {
+    // 延迟 100ms 等键盘动画开始后强行按回原位
+    setTimeout(adjustLayout, 100);
+});
+
+// C. 保持你原本的事件绑定
+sendBtn.onclick = handleSend;
+userInput.onkeydown = (e) => { 
+    if(e.key === 'Enter' && !e.shiftKey) { 
+        e.preventDefault(); 
+        handleSend(); 
+    } 
+};
+    
+    // 确保聊天记录滚动到底部
+    chatDisplay.scrollTop = chatDisplay.scrollHeight;
 }
 
 // --- 请求 AI ---
