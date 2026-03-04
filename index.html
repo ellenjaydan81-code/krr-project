@@ -53,30 +53,28 @@
 body { 
     margin: 0; 
     padding: 0;
-    background: #fff5f7; /* 底色改为奶白色 */
-    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; 
+    background: #fff5f7;
+    font-family: -apple-system, "PingFang SC", sans-serif; 
     display: flex; 
     justify-content: center; 
     align-items: center;
-    height: 100vh;
+    /* 解决 Safari 100vh 问题 */
+    height: 100dvh; 
     width: 100vw;
     overflow: hidden; 
 }
 
 /* 聊天窗容器：居中锁定 */
 .phone { 
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    width: 390px; 
-    height: 100vh; 
-    max-height: 844px; 
+    position: relative; /* 改为相对定位或 flex 居中 */
+    width: 100%; 
+    max-width: 414px; /* 适配主流大屏手机 */
+    height: 100%; 
     background: var(--bg-gradient); 
     display: flex; 
     flex-direction: column; 
     overflow: hidden; 
-    box-shadow: 0 15px 40px rgba(255, 182, 193, 0.3); /* 粉色氛围阴影 */
+    box-shadow: 0 10px 30px rgba(255, 182, 193, 0.2);
 }
 
 /* 头部：精致少女感 */
@@ -99,9 +97,10 @@ body {
 #chatDisplay { 
     flex: 1; 
     overflow-y: auto; 
-    padding: 20px; 
+    padding: 15px; 
     display: flex; 
     flex-direction: column;
+    -webkit-overflow-scrolling: touch; /* 增强 iOS 滚动流畅度 */
 }
 #chatDisplay::-webkit-scrollbar { display: none; }
 
@@ -161,11 +160,11 @@ body {
 
 /* 输入区域 */
 .input-area { 
-    padding: 15px 15px 35px; 
-    background: rgba(255, 255, 255, 0.5);
+    padding: 10px 15px calc(10px + env(safe-area-inset-bottom)); /* 适配 iPhone 底部小横条 */
+    background: rgba(255, 255, 255, 0.7);
     backdrop-filter: blur(15px);
     display: flex; 
-    gap: 12px; 
+    gap: 10px; 
     flex-shrink: 0;
     border-top: 1px solid rgba(255, 255, 255, 0.3);
 }
@@ -208,6 +207,7 @@ body {
     width: 100%; margin-bottom: 12px; padding: 10px;
     background: #fff; border: 1px solid #ffe4e9; color: #8a6d7a; border-radius: 8px;
 }
+
     </style>
 </head>
 <body>
@@ -351,7 +351,23 @@ function addBubble(role, content) {
     chatDisplay.scrollTop = chatDisplay.scrollHeight;
     return div;
 }
+// 解决移动端键盘弹出导致页面变形的黑科技
+if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', () => {
+        // 动态设置 body 的高度为视觉视口的高度
+        const viewHeight = window.visualViewport.height;
+        document.body.style.height = `${viewHeight}px`;
+        // 自动滚动到底部以查看最新消息
+        chatDisplay.scrollTop = chatDisplay.scrollHeight;
+    });
+}
 
+// 优化输入框自动高度逻辑
+userInput.addEventListener('input', function() {
+    this.style.height = '44px';
+    const newHeight = Math.min(this.scrollHeight, 100); // 最高 100px
+    this.style.height = newHeight + 'px';
+});
 // --- 事件 ---
 sendBtn.onclick = handleSend;
 userInput.onkeydown = (e) => { if(e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } };
