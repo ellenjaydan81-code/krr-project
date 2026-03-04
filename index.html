@@ -62,27 +62,24 @@ html, body {
 }
 
 .phone { 
-    /* 使用 100dvh 获取移动端浏览器的真实高度 */
-    height: 100dvh; 
-    width: 100vw; 
-    max-width: 500px; /* 在电脑上看也不会太窄 */
-    margin: 0 auto;
+    position: fixed; /* 改为 fixed 锁定位置 */
+    left: 0; top: 0;
+    width: 100vw; /* 铺满屏幕宽度 */
+    height: 100dvh; /* 动态高度，适配 Safari 工具栏 */
     background: var(--bg-gradient); 
     display: flex; 
-    flex-direction: column;
-    position: relative;
+    flex-direction: column; 
+    overflow: hidden; 
 }
 
 /* 2. Header 重新排版：解决“太窄”和挤压感 */
 .header { 
-    padding: 60px 25px 20px; /* 增加顶部高度适配刘海，增加左右间距 */
+    padding: calc(env(safe-area-inset-top) + 10px) 20px 15px; /* 自动适配刘海高度 */
     text-align: center;
-    background: rgba(255, 255, 255, 0.15); /* 加一点点底色增加层次感 */
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.3);
-    flex-shrink: 0; /* 确保头部不会被压缩 */
+    border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+    flex-shrink: 0;
+    width: 100%; /* 确保头部撑开 */
 }
-
 .name { 
     font-size: 24px; /* 稍微调大一点 */
     font-weight: 600; 
@@ -107,13 +104,12 @@ html, body {
     background: #fff; 
     border: 1px solid #ffd1dc; 
     border-radius: 22px; 
-    padding: 12px 18px; 
+    padding: 10px 15px; 
     outline: none; 
-    font-size: 16px !important; /* 强制 16px，iOS 就不敢乱放大了 */
+    font-size: 16px !important; /* 核心：iOS 看到 16px 就不会放大了 */
     color: #8a6d7a;
     resize: none;
     height: 44px;
-    -webkit-appearance: none;
 }
 
 .input-area {
@@ -306,6 +302,7 @@ function adjustLayout() {
 // --- 2. 核心发送逻辑 (替换) ---
 async function handleSend() {
     const text = userInput.value; 
+    // updateHeight()
     // 依然保持你的纯粹获取原则，不做 trim 以外的乱改
     if (!text.trim() || isTyping) return;
 
@@ -533,6 +530,25 @@ if (window.visualViewport) {
 }
 window.addEventListener('resize', setRealHeight);
 setRealHeight(); // 初始化调用
+
+// --- 专门针对 iPhone 13 的布局补丁 ---
+const updateHeight = () => {
+    // 强制让页面回到顶部，防止 header 飞走
+    window.scrollTo(0, 0); 
+    if (window.visualViewport) {
+        // 动态根据键盘高度调整容器高度
+        document.querySelector('.phone').style.height = `${window.visualViewport.height}px`;
+    }
+};
+
+// 监听键盘弹出（视口改变）
+if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', updateHeight);
+    window.visualViewport.addEventListener('scroll', () => window.scrollTo(0, 0));
+}
+
+// 修正你原本代码里的 headerTrigger 未定义问题
+const headerTrigger = document.getElementById('headerTrigger')
     </script>
 </body>
 </html>
