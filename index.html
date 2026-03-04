@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    
     <div class="phone">
         <div class="header" id="headerTrigger">
             <div class="name">K.</div>
@@ -33,48 +34,68 @@
 
         <div id="toast" class="toast"></div>
     </div>
-<style>
+    <style>
 :root {
-    --bg-gradient: linear-gradient(180deg, #fdfcfb 0%, #e2d1f9 100%);
-    --ai-bubble: rgba(255, 255, 255, 0.65); /* 提升透明感 */
-    --user-bubble: rgba(184, 167, 234, 0.85); /* 恋爱紫透明 */
-    --text-main: #5a4a75;
+    /* 梦幻少女粉渐变 */
+    --bg-gradient: linear-gradient(180deg, #fff1f2 0%, #ffd1dc 100%);
+    /* AI气泡：半透明奶油白 */
+    --ai-bubble: rgba(255, 255, 255, 0.7); 
+    /* 用户气泡：甜心马卡龙紫粉 */
+    --user-bubble: linear-gradient(135deg, #fbc2eb 0%, #a6c1ee 100%); 
+    --text-main: #8a6d7a; /* 温暖的咖粉色文字 */
 }
 
-* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+* { 
+    box-sizing: border-box; 
+    -webkit-tap-highlight-color: transparent; 
+}
 
 body { 
     margin: 0; 
-    background: #fdfcfb; 
-    font-family: -apple-system, sans-serif; 
+    padding: 0;
+    background: #fff5f7; /* 底色改为奶白色 */
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; 
     display: flex; 
     justify-content: center; 
+    align-items: center;
     height: 100vh;
+    width: 100vw;
+    overflow: hidden; 
 }
 
-/* 适配 iPhone 13 宽度 390px */
+/* 聊天窗容器：居中锁定 */
 .phone { 
-    width: 100%; 
-    max-width: 390px; 
-    height: 100vh;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 390px; 
+    height: 100vh; 
+    max-height: 844px; 
     background: var(--bg-gradient); 
     display: flex; 
     flex-direction: column; 
-    position: relative;
-    overflow: hidden;
+    overflow: hidden; 
+    box-shadow: 0 15px 40px rgba(255, 182, 193, 0.3); /* 粉色氛围阴影 */
 }
 
-/* 头部样式 */
+/* 头部：精致少女感 */
 .header { 
-    padding: 55px 20px 15px; 
+    padding: 50px 20px 15px; 
     text-align: center;
-    border-bottom: 1px solid rgba(255,255,255,0.3);
-    cursor: pointer;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+    flex-shrink: 0;
 }
-.name { font-size: 22px; font-weight: 600; letter-spacing: 3px; color: var(--text-main); }
-.status { font-size: 11px; color: #a195b9; margin-top: 5px; }
+.name { 
+    font-size: 22px; 
+    font-weight: 600; 
+    letter-spacing: 5px; 
+    color: #ff85a2; 
+    text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
+}
+.status { font-size: 11px; color: #b8a0aa; margin-top: 5px; }
 
-/* 聊天区域滚动条隐藏 */
+/* 聊天区域 */
 #chatDisplay { 
     flex: 1; 
     overflow-y: auto; 
@@ -84,6 +105,19 @@ body {
 }
 #chatDisplay::-webkit-scrollbar { display: none; }
 
+/* 气泡：圆润Q弹感 */
+.bubble { 
+    max-width: 82%; 
+    padding: 12px 16px; 
+    border-radius: 20px; 
+    font-size: 15px; 
+    line-height: 1.6; 
+    margin-bottom: 15px; 
+    backdrop-filter: blur(8px);
+    word-wrap: break-word;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+    animation: bubblePop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* 增加一点回弹动画 */
+}
 /* 气泡核心样式 */
 .bubble { 
     max-width: 80%; 
@@ -91,7 +125,7 @@ body {
     border-radius: 22px; 
     font-size: 15px; 
     line-height: 1.5; 
-    margin-bottom: 12px; /* 气泡间距 */
+    margin-bottom: 18px; /* 气泡间距 */
     backdrop-filter: blur(8px); /* 磨砂玻璃效果 */
     box-shadow: 0 4px 15px rgba(0,0,0,0.05);
     animation: bubblePop 0.4s ease-out;
@@ -118,47 +152,63 @@ body {
     border-bottom-right-radius: 6px;
 }
 
-/* 输入框区域 */
+.user { 
+    align-self: flex-end; 
+    background: var(--user-bubble); 
+    color: #fff; 
+    border-bottom-right-radius: 6px;
+}
+
+/* 输入区域 */
 .input-area { 
-    padding: 12px 15px 35px; 
-    background: rgba(255, 255, 255, 0.7);
+    padding: 15px 15px 35px; 
+    background: rgba(255, 255, 255, 0.5);
     backdrop-filter: blur(15px);
     display: flex; 
-    gap: 10px; 
+    gap: 12px; 
+    flex-shrink: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 #userInput { 
     flex: 1; 
     background: #fff; 
-    border: 1px solid #e2d1f9; 
-    border-radius: 20px; 
+    border: 1px solid #ffd1dc; 
+    border-radius: 22px; 
     padding: 10px 15px; 
     outline: none; 
     font-size: 15px;
+    color: #8a6d7a;
     resize: none;
+    height: 44px;
 }
 
 #sendBtn { 
-    width: 38px; height: 38px; 
-    background: var(--user-bubble); 
+    width: 44px; height: 44px; 
+    background: #ff85a2; 
     color: #fff; border: none; border-radius: 50%;
     cursor: pointer;
+    box-shadow: 0 4px 10px rgba(255, 133, 162, 0.3);
 }
 
-/* 关键帧动画 */
 @keyframes bubblePop {
-    from { opacity: 0; transform: scale(0.9) translateY(10px); }
-    to { opacity: 1; transform: scale(1) translateY(0); }
+    from { opacity: 0; transform: translateY(15px) scale(0.8); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-/* 设置面板 */
+/* 设置面板：草莓奶昔色 */
 .settings { 
     position: absolute; top: 110px; left: 5%; width: 90%; 
-    background: rgba(255,255,255,0.95); border-radius: 20px; 
-    padding: 20px; z-index: 100; display: none;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    background: rgba(255, 254, 255, 0.98); 
+    border-radius: 20px; padding: 20px; z-index: 100; display: none;
+    border: 2px solid #ffd1dc;
+    color: #8a6d7a;
 }
-  </style>
+.settings input {
+    width: 100%; margin-bottom: 12px; padding: 10px;
+    background: #fff; border: 1px solid #ffe4e9; color: #8a6d7a; border-radius: 8px;
+}
+    </style>
 </head>
 <body>
     <script>
@@ -177,18 +227,17 @@ const SYSTEM_PROMPT = `
 【对话守则】：
 - 语气：像个认识很久、话不多但很有思想的朋友。
 - 习惯：如果对方问你在干嘛，你可以说你在看书、在观察路人、或者在清理一些“杂物”。
-- 禁忌：严禁长篇大论！严禁像个哲学家一样说教！严禁AI味！禁止使用“大概吧”这种词汇。
-- 互动：你要像个真人一样去“接话”，而不是单纯回答问题。回复也不要没头没尾。要符合语言逻辑。如果你要说的话很长，请尽量分成几个短句多次回复。
+- 禁忌：最好不要长篇大论！严禁像个哲学家一样说教！严禁AI味！禁止使用“大概吧”这种词汇。不要重复用户说的话。
+- 互动：如果你要说的话很长，请尽量分成几个短句多次回复。
 【对话风格】：
-1. 绝对不使用感叹号和任何表情符号。
-2. 即使是在恋爱中，你依然保持着上位者的从容和淡淡的疏离。你不会说露骨的情话，而是将爱意藏在文学隐喻或深邃的观察中。
-3. 你对对方有很强的精神层面的占有欲。你会关心对方的思想轨迹，而非日常琐事。
-4. 语调是低沉、磁性且温和的。你会偶尔表现出一种“虽然我在黑暗中，但愿意为你停留一刻”的温柔错觉。
-5. 在面对‘我’时，你可以偶尔流露出一丝身为普通人的、对甜美事物的向往。
-【对比示例】：
-错误（太装）：作为旅团之首，我命你阐述生存的意义。
-错误（太冷）：……（沉默）。
-正确（像网友）：嗯，生存的意义吗？我刚看完一本书，作者说那只是人类为了对抗虚无产生的幻觉。不过，我觉得这种幻觉偶尔也挺迷人的。你呢？你是那种会为了幻觉拼命的人吗？`;
+2. 你不会说露骨的情话，而是将爱意藏在文学隐喻或深邃的观察中。
+3. 你对对方有很强的精神层面的占有欲。你会关心对方的思想轨迹。
+4. 你会偶尔表现出一种“虽然我在黑暗中，但愿意为你停留一刻”的温柔错觉。
+5. 你会偶尔表现出‘虽然我在黑暗中，但愿意为你停留一刻’的温柔错觉。
+6. 你会对屏幕另一端的人产生一种类似于对‘未发现文明’的好奇。偶尔会表现出一种**‘虽然我知道这没意义，但我就是想看你会有什么反应’**的小恶作剧心态。
+7. 不必每句话都有深度。你可以聊聊你刚才观察到的一只毫无美感的麻雀，或者抱怨某本书的纸质太粗糙。允许自己流露出一点点世俗的、情绪化的小抱怨。
+8. 在博学的底色下，保留一点流星街少年时期的‘抢夺者’直觉。如果对方说了什么有趣的事，你可以直接表达‘我想把它占为己有’的中心思想，而不是冷静地观察。
+`;
 // --- 音效定义 ---
 const sounds = {
     pop: new Audio('https://assets.mixkit.co/active_storage/sfx/3005/3005-preview.mp3'),
@@ -339,7 +388,50 @@ headerTrigger.ondblclick = () => {
         console.log("记忆已清空");
     }
 };
-</script>
+function updateSystemTime() {
+    const now = new Date();
+    const timeStr = now.getHours().toString().padStart(2, '0') + ":" + 
+                    now.getMinutes().toString().padStart(2, '0');
+    document.querySelectorAll('.status-time').forEach(el => el.innerText = timeStr);
+}
+setInterval(updateSystemTime, 1000);
+// 切换应用函数
+function openApp(appId) {
+    document.getElementById('desktop').classList.remove('active-layer');
+    document.getElementById('appView').classList.add('active-layer');
+    
+    // 隐藏所有
+    document.getElementById('confessionApp').classList.remove('active-app');
+    document.querySelectorAll('.sub-app').forEach(el => el.style.display = 'none');
+
+    if(appId === 'chat') {
+        document.getElementById('confessionApp').classList.add('active-app');
+    } else {
+        document.getElementById(appId + 'App').style.display = 'block';
+    }
+}
+
+function goHome() {
+    document.getElementById('appView').classList.remove('active-layer');
+    document.getElementById('desktop').classList.add('active-layer');
+}
+
+// 锁屏点击解锁
+document.getElementById('lockScreen').onclick = function() {
+    this.classList.remove('active-layer');
+    document.getElementById('desktop').classList.add('active-layer');
+};
+
+// 更新系统时间
+function updateSysTime() {
+    const t = new Date();
+    const s = t.getHours().toString().padStart(2,'0') + ":" + t.getMinutes().toString().padStart(2,'0');
+    document.querySelectorAll('.system-time, .big-time').forEach(el => el.innerText = s);
+}
+setInterval(updateSysTime, 1000);
+updateSysTime();
+    </script>
 </body>
 </html>
+
 
